@@ -20,7 +20,7 @@ namespace dart {
 
 Tracker::Tracker() : _depthSource(0), _pcSource(0), _optimizer(0),
     _T_mcs(0), _T_fms(0), _sdfFrames(0), _sdfs(0), _nSdfs(0), _distanceThresholds(0),
-    _normalThresholds(0), _planeOffsets(0), _planeNormals(0), _dampingMatrices(0) {
+    _normalThresholds(0),  _dampingMatrices(0) {
 
     glewInit();
 
@@ -275,8 +275,6 @@ bool Tracker::addModel(dart::HostOnlyModel &model,
         _nSdfs = new MirroredVector<int>(1);
         _distanceThresholds = new MirroredVector<float>(1);
         _normalThresholds = new MirroredVector<float>(1);
-        _planeOffsets = new MirroredVector<float>(1);
-        _planeNormals = new MirroredVector<float3>(1);
     } else {
         _T_mcs->resize(getNumModels());
         _T_fms->resize(getNumModels());
@@ -285,8 +283,6 @@ bool Tracker::addModel(dart::HostOnlyModel &model,
         _nSdfs->resize(getNumModels());
         _distanceThresholds->resize(getNumModels());
         _normalThresholds->resize(getNumModels());
-        _planeOffsets->resize(getNumModels());
-        _planeNormals->resize(getNumModels());
     }
 
     MirroredModel & mm = *_mirroredModels.back();
@@ -308,8 +304,6 @@ bool Tracker::addModel(dart::HostOnlyModel &model,
         _opts.distThreshold.resize(getNumModels());         _opts.distThreshold.back() = _opts.distThreshold.front();
         _opts.regularization.resize(getNumModels());        _opts.regularization.back() = _opts.regularization.front();
         _opts.regularizationScaled.resize(getNumModels());  _opts.regularizationScaled.resize(getNumModels());
-        _opts.planeOffset.resize(getNumModels());           _opts.planeOffset.back() = _opts.planeOffset.front();
-        _opts.planeNormal.resize(getNumModels());           _opts.planeNormal.back() = _opts.planeNormal.front();
         _opts.lambdaIntersection.resize(getNumModels()*getNumModels());
         for (int i=(getNumModels()-1)*(getNumModels()-1); i<_opts.lambdaIntersection.size(); ++i) { _opts.lambdaIntersection[i] = 0; }
 
@@ -462,8 +456,6 @@ void Tracker::optimizePoses() {
                               *_nSdfs,
                               *_distanceThresholds,
                               *_normalThresholds,
-                              *_planeOffsets,
-                              *_planeNormals,
                               _collisionClouds,
                               _intersectionPotentialMatrices,
                               _dampingMatrices,

@@ -184,8 +184,6 @@ private:
     MirroredVector<int> * _nSdfs;
     MirroredVector<float> * _distanceThresholds;
     MirroredVector<float> * _normalThresholds;
-    MirroredVector<float> * _planeOffsets;
-    MirroredVector<float3> * _planeNormals;
 };
 
 }

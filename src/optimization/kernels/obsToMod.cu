@@ -21,8 +21,6 @@ __global__ void gpu_errorAndDataAssociationObsToMod(const float4 * obsVertMap,
                                                     const int nSdfs,
                                                     const float distanceThreshold,
                                                     const float normThreshold,
-                                                    const float planeOffset,
-                                                    const float3 planeNormal,
                                                     int * lastElement,
                                                     DataAssociatedPoint * pts,
                                                     int * debugDataAssociation,
@@ -44,69 +42,66 @@ __global__ void gpu_errorAndDataAssociationObsToMod(const float4 * obsVertMap,
 
             const float4 xObs_m = T_mc*xObs_c;
 
-            if (dot(make_float3(xObs_m),planeNormal) >= planeOffset) {
+            // calculate distance
+            float sdfError = 1e20;
+            int grid = -1;
 
-                // calculate distance
-                float sdfError = 1e20;
-                int grid = -1;
+            for (int g=0; g < nSdfs; ++g) {
 
-                for (int g=0; g < nSdfs; ++g) {
+                const int f = sdfFrames[g];
+                const float4 xObs_f = T_fms[f]*xObs_m;
+                const Grid3D<float> & sdf = sdfs[g];
 
-                    const int f = sdfFrames[g];
-                    const float4 xObs_f = T_fms[f]*xObs_m;
-                    const Grid3D<float> & sdf = sdfs[g];
+                const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
 
-                    const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
+                if (!sdf.isInBoundsGradientInterp(xObs_g)) {
+                    continue;
+                }
 
-                    if (!sdf.isInBoundsGradientInterp(xObs_g)) {
-                        continue;
-                    }
+                const float d = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
 
-                    const float d = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
+                //if (fabs(d) < fabs(sdf_error)) {
+                if (d < sdfError) {
+                    sdfError = d;
+                    grid = g;
+                }
+            }
 
-                    //if (fabs(d) < fabs(sdf_error)) {
-                    if (d < sdfError) {
-                        sdfError = d;
-                        grid = g;
+            // skip unassociated points and points beyond the distance threshold
+            if (sdfError*sdfError > distanceThreshold*distanceThreshold) { }
+            else {
+
+                const int f = sdfFrames[grid];
+                const float4 xObs_f = T_fms[f]*xObs_m;
+                const Grid3D<float> & sdf = sdfs[grid];
+                const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
+
+                // TODO: figure out what's going on with the -1
+                const float4 nPred =  -1*(SE3Invert( T_fms[f]*T_mc )*normalize(make_float4(sdf.getGradientInterpolated(xObs_g),0)));
+
+                if (dbgNorm) { debugNorm[index] = nPred; }
+
+                float4 v = obsNormMap[index];
+                float3 nObs = make_float3(0,0,0);
+                if (v.w > 0.0) {
+                    v.w = 0;
+                    nObs = make_float3(v);
+                    if (dot(nPred,v) < normThreshold ) {
+                        return;
                     }
                 }
 
-                // skip unassociated points and points beyond the distance threshold
-                if (sdfError*sdfError > distanceThreshold*distanceThreshold) { }
-                else {
+                if (dbgDA) { debugDataAssociation[index] = grid; }
+                if (dbgErr) { debugError[index] = sdfError; }
 
-                    const int f = sdfFrames[grid];
-                    const float4 xObs_f = T_fms[f]*xObs_m;
-                    const Grid3D<float> & sdf = sdfs[grid];
-                    const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
-
-                    // TODO: figure out what's going on with the -1
-                    const float4 nPred =  -1*(SE3Invert( T_fms[f]*T_mc )*normalize(make_float4(sdf.getGradientInterpolated(xObs_g),0)));
-
-                    if (dbgNorm) { debugNorm[index] = nPred; }
-
-                    float4 v = obsNormMap[index];
-                    float3 nObs = make_float3(0,0,0);
-                    if (v.w > 0.0) {
-                        v.w = 0;
-                        nObs = make_float3(v);
-                        if (dot(nPred,v) < normThreshold ) {
-                            return;
-                        }
-                    }
-
-                    if (dbgDA) { debugDataAssociation[index] = grid; }
-                    if (dbgErr) { debugError[index] = sdfError; }
-
-                    int myElement = atomicAdd(lastElement,1);
-                    DataAssociatedPoint dt;
-                    dt.index = index;
-                    dt.dataAssociation = grid;
-                    dt.error = sdfError;
-                    pts[myElement] = dt;
+                int myElement = atomicAdd(lastElement,1);
+                DataAssociatedPoint dt;
+                dt.index = index;
+                dt.dataAssociation = grid;
+                dt.error = sdfError;
+                pts[myElement] = dt;
 
 
-                }
             }
         }
     }
@@ -126,8 +121,6 @@ __global__ void gpu_errorAndDataAssociationObsToModMultiModel(const float4 * obs
                                                               const int * nSdfs,
                                                               const float * distanceThresholds,
                                                               const float * normThresholds,
-                                                              const float * planeOffsets,
-                                                              const float3 * planeNormals,
                                                               int * lastElement,
                                                               DataAssociatedPoint * * pts,
                                                               int * debugDataAssociation,
@@ -157,48 +150,43 @@ __global__ void gpu_errorAndDataAssociationObsToModMultiModel(const float4 * obs
         for (int m=0; m<nModels; ++m) {
 
             const float4 xObs_m = T_mcs[m]*xObs_c;
-            const float & planeOffset = planeOffsets[m];
-            const float3 & planeNormal = planeNormals[m];
-            if (dot(make_float3(xObs_m),planeNormal) >= planeOffset) {
 
-                const int mNSdfs = nSdfs[m];
-                const int * mSdfFrames = sdfFrames[m];
-                const SE3 * mT_fms = T_fms[m];
-                const Grid3D<float> * mSdfs = sdfs[m];
+            const int mNSdfs = nSdfs[m];
+            const int * mSdfFrames = sdfFrames[m];
+            const SE3 * mT_fms = T_fms[m];
+            const Grid3D<float> * mSdfs = sdfs[m];
 
-                for (int g=0; g<mNSdfs; ++g) {
+            for (int g=0; g<mNSdfs; ++g) {
 
-                    const int f = mSdfFrames[g];
-                    const float4 xObs_f = mT_fms[f]*xObs_m;
-                    const Grid3D<float> & sdf = mSdfs[g];
+                const int f = mSdfFrames[g];
+                const float4 xObs_f = mT_fms[f]*xObs_m;
+                const Grid3D<float> & sdf = mSdfs[g];
 
-                    //printf("model %d sdf %d is in frame %d\n",m,g,f);
+                //printf("model %d sdf %d is in frame %d\n",m,g,f);
 
-                    //printf("%f ",sdf.resolution);
+                //printf("%f ",sdf.resolution);
 
-                    const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
+                const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
 
-                    if (!sdf.isInBoundsGradientInterp(xObs_g)) {
-                        continue;
+                if (!sdf.isInBoundsGradientInterp(xObs_g)) {
+                    continue;
+                }
+
+                const float d = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
+
+                //printf("%f ",d);
+
+                // if (fabs(d) < fabs(sdfError) {
+                if (d < sdfError) {
+                    //printf(".");
+
+                    if (d*d < distanceThresholds[m]*distanceThresholds[m]) {
+
+                        //printf("*");
+                        sdfError = d;
+                        associatedGrid = g;
+                        associatedModel = m;
                     }
-
-                    const float d = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
-
-                    //printf("%f ",d);
-
-                    // if (fabs(d) < fabs(sdfError) {
-                    if (d < sdfError) {
-                        //printf(".");
-
-                        if (d*d < distanceThresholds[m]*distanceThresholds[m]) {
-
-                            //printf("*");
-                            sdfError = d;
-                            associatedGrid = g;
-                            associatedModel = m;
-                        }
-                    }
-
                 }
 
             }
@@ -522,30 +510,30 @@ void errorAndDataAssociation(const float4 * dObsVertMap,
     if (debugDataAssociation == 0) {
         if (debugError == 0) {
             if (debugNorm == 0) {
-                gpu_errorAndDataAssociationObsToMod<false,false,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<false,false,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold,  dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToMod<false,false,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<false,false,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             }
         } else {
             if (debugNorm == 0) {
-                gpu_errorAndDataAssociationObsToMod<false,true,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<false,true,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToMod<false,true,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<false,true,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             }
         }
     }
     else {
         if (debugError == 0) {
             if (debugNorm == 0) {
-                gpu_errorAndDataAssociationObsToMod<true,false,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<true,false,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold,  dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToMod<true,false,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<true,false,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold,  dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             }
         } else {
             if (debugNorm == 0) {
-                gpu_errorAndDataAssociationObsToMod<true,true,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<true,true,false><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold,  dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToMod<true,true,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold, opts.planeOffset[0], opts.planeNormal[0], dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
+                gpu_errorAndDataAssociationObsToMod<true,true,true><<<grid,block>>>(dObsVertMap, dObsNormMap, width, height, model.getTransformCameraToModel(), model.getDeviceTransformsModelToFrame(), model.getDeviceSdfFrames(), model.getDeviceSdfs(), model.getNumSdfs(), opts.distThreshold[0], opts.normThreshold,  dLastElement, dPts, debugDataAssociation, debugError, debugNorm);
             }
         }
     }
@@ -566,8 +554,6 @@ void errorAndDataAssociationMultiModel(const float4 * dObsVertMap,
                                        const int * nSdfs,
                                        const float * distanceThresholds,
                                        const float * normalThresholds,
-                                       const float * planeOffsets,
-                                       const float3 * planeNormals,
                                        int * lastElements,
                                        DataAssociatedPoint * * pts,
                                        int * dDebugDataAssociation,
@@ -589,29 +575,29 @@ void errorAndDataAssociationMultiModel(const float4 * dObsVertMap,
     if (dDebugDataAssociation == 0) {
         if (dDebugError == 0) {
             if (dDebugNorm == 0) {
-                gpu_errorAndDataAssociationObsToModMultiModel<false,false,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<false,false,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToModMultiModel<false,false,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<false,false,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             }
         } else {
             if (dDebugNorm == 0) {
-                gpu_errorAndDataAssociationObsToModMultiModel<false,true,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<false,true,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToModMultiModel<false,true,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<false,true,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             }
         }
     } else {
         if (dDebugError == 0) {
             if (dDebugNorm == 0) {
-                gpu_errorAndDataAssociationObsToModMultiModel<true,false,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<true,false,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToModMultiModel<true,false,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<true,false,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             }
         } else {
             if (dDebugNorm == 0) {
-                gpu_errorAndDataAssociationObsToModMultiModel<true,true,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<true,true,false><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             } else {
-                gpu_errorAndDataAssociationObsToModMultiModel<true,true,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds, planeOffsets, planeNormals, lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
+                gpu_errorAndDataAssociationObsToModMultiModel<true,true,true><<<grid,block,0,stream>>>(dObsVertMap, dObsNormMap, width, height, nModels, T_mcs, T_fms, sdfFrames, sdfs, nSdfs,distanceThresholds, normalThresholds,  lastElements, pts, dDebugDataAssociation, dDebugError, dDebugNorm);
             }
         }
     }
