@@ -12,6 +12,16 @@ add_definitions(-std=c++11)
 # set CMakeModule path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/")
 
+# check if catkin environment is used
+find_package(catkin QUIET)
+
+if(catkin_FOUND)
+    catkin_package(
+        INCLUDE_DIRS src
+        LIBRARIES ${PROJECT_NAME}
+    )
+endif()
+
 # find packages with modules
 find_package(CUDA REQUIRED)
 find_package(PNG REQUIRED)
@@ -270,20 +280,33 @@ if(${BUILD_TESTS} AND ${GTEST_FOUND})
 endif()
 
 # installation of library and header files
-install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION lib)
-install(DIRECTORY src/ DESTINATION include/dart FILES_MATCHING PATTERN "*.h")
+if(catkin_FOUND)
+    install(TARGETS ${PROJECT_NAME}
+        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+    )
 
-# setup pkg-config files
-SET(PKG_CONFIG_REQUIRES "tinyxml libpng libmatheval eigen3 cuda-7.5")
-SET(PKG_CONFIG_LIBDIR       "\${prefix}/lib" )
-SET(PKG_CONFIG_INCLUDEDIR   "\${prefix}/include" )
-SET(PKG_CONFIG_LIBS         "-L\${libdir} -l${PROJECT_NAME}" )
-SET(PKG_CONFIG_CFLAGS       "-I\${includedir}" )
+    install(DIRECTORY src/
+       DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+       FILES_MATCHING PATTERN "*.h"
+    )
+else()
+    install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION lib)
+    install(DIRECTORY src/ DESTINATION include/dart FILES_MATCHING PATTERN "*.h")
 
-CONFIGURE_FILE(
-  "${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
-)
+    # setup pkg-config files
+    SET(PKG_CONFIG_REQUIRES "tinyxml libpng libmatheval eigen3 cuda-7.5")
+    SET(PKG_CONFIG_LIBDIR       "\${prefix}/lib" )
+    SET(PKG_CONFIG_INCLUDEDIR   "\${prefix}/include" )
+    SET(PKG_CONFIG_LIBS         "-L\${libdir} -l${PROJECT_NAME}" )
+    SET(PKG_CONFIG_CFLAGS       "-I\${includedir}" )
 
-INSTALL(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc"
-        DESTINATION lib/pkgconfig)
+    CONFIGURE_FILE(
+      "${CMAKE_CURRENT_SOURCE_DIR}/pkg-config.pc.cmake"
+      "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc"
+    )
+
+    INSTALL(FILES "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc"
+            DESTINATION lib/pkgconfig)
+endif()

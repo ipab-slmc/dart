@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>dart</name>
+  <version>0.0.0</version>
+  <description>DART</description>
+  <maintainer email="Christian.Rauch@ed.ac.uk">Christian Rauch</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+</package>
