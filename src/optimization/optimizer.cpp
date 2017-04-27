@@ -712,7 +712,6 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
         }
 
         if (opts.lambdaModToObs > 0) {
-            _lastElements->syncDeviceToHost();
             for (int m=0; m<nModels; ++m) {
                 _iterationSummaries[m][iteration].nPredictedPoints = _lastElements->hostPtr()[m];
             }
