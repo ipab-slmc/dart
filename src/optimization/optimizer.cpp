@@ -462,8 +462,10 @@ void Optimizer::optimizePose(MirroredModel & model,
         float intersectionError = 0;
 
         if (opts.lambdaObsToMod > 0) {
-            errorAndDataAssociation(dObsVertMap,dObsNormMap,width,height,model,opts,_dPts->hostPtr()[0],_lastElements->devicePtr(),_lastElements->hostPtr(),
-                    opts.debugObsToModDA ? _dDebugDataAssocObsToMod : 0, opts.debugObsToModErr ? _dDebugObsToModError : 0, opts.debugObsToModNorm ? _dDebugObsToModNorm : 0);
+            if(opts.dataAssociation==MinSDF) {
+                errorAndDataAssociation(dObsVertMap,dObsNormMap,width,height,model,opts,_dPts->hostPtr()[0],_lastElements->devicePtr(),_lastElements->hostPtr(),
+                        opts.debugObsToModDA ? _dDebugDataAssocObsToMod : 0, opts.debugObsToModErr ? _dDebugObsToModError : 0, opts.debugObsToModNorm ? _dDebugObsToModNorm : 0);
+            }
             computeObsToModContribution(eJ,JTJ,obsToModError,model,pose,opts,observation);
         }
         if (opts.lambdaModToObs > 0) {
@@ -611,17 +613,20 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
             _predictionRenderer->cullUnobservable(dObsVertMap,width,height,_depthPredictStream);
         }
         
-        errorAndDataAssociationMultiModel(dObsVertMap,dObsNormMap,width,height,nModels,
-                                          T_mcs.devicePtr(),T_fms.devicePtr(),
-                                          sdfFrames.devicePtr(),sdfs.devicePtr(),
-                                          nSdfs.devicePtr(),distanceThresholds.devicePtr(),
-                                          normalThresholds.devicePtr(),planeOffsets.devicePtr(),
-                                          planeNormals.devicePtr(),_lastElements->devicePtr(),
-                                          _dPts->devicePtr(),
-                                          opts.debugObsToModDA ? _dDebugDataAssocObsToMod : 0,
-                                          opts.debugObsToModErr ? _dDebugObsToModError : 0,
-                                          opts.debugObsToModNorm ? _dDebugObsToModNorm : 0,
-                                          _posInfoStream);
+        if(opts.dataAssociation==MinSDF) {
+            errorAndDataAssociationMultiModel(dObsVertMap,dObsNormMap,width,height,nModels,
+                                              T_mcs.devicePtr(),T_fms.devicePtr(),
+                                              sdfFrames.devicePtr(),sdfs.devicePtr(),
+                                              nSdfs.devicePtr(),distanceThresholds.devicePtr(),
+                                              normalThresholds.devicePtr(),planeOffsets.devicePtr(),
+                                              planeNormals.devicePtr(),_lastElements->devicePtr(),
+                                              _dPts->devicePtr(),
+                                              opts.debugObsToModDA ? _dDebugDataAssocObsToMod : 0,
+                                              opts.debugObsToModErr ? _dDebugObsToModError : 0,
+                                              opts.debugObsToModNorm ? _dDebugObsToModNorm : 0,
+                                              _posInfoStream);
+        }
+
 
 
 //        int sysSize = 3*opts.contactPriors.size();

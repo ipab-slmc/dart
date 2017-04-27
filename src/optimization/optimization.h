@@ -6,6 +6,12 @@
 
 namespace dart {
 
+enum DataAssociation {
+    None,           // no data association within regular optimization loop,
+                    // e.g. to use alternative method in priors
+    MinSDF,         // associate data point to nearest part (minimum SDF value)
+};
+
 struct OptimizationOptions {
 
     int numIterations;                              /**< The number of solver iterations run. */
@@ -22,6 +28,8 @@ struct OptimizationOptions {
     float normThreshold; // TODO: remove?
     float huberDelta;
     float contactThreshold; // TODO: remove?
+
+    DataAssociation dataAssociation;
 
     // debugging options
     bool debugObsToModDA;                           /**< Tells the optimizer whether to compute a dense data association map for debugging. If true, the map can be accessed with Optimizer::getDeviceDebugDataAssociationObsToMod(). */
@@ -58,6 +66,7 @@ struct OptimizationOptions {
         debugJTJ(false),
 
         contactThreshold(0.01),
+        dataAssociation(MinSDF),
         huberDelta(0.02)
 
     { }
