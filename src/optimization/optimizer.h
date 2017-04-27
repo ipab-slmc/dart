@@ -123,7 +123,7 @@ public:
         _predictionRenderer->debugPredictionRay(constModelPtrs,x,y,boxIntersects,raySteps);
     }
 
-private:
+//private:
 
     void init(const int depthWidth, const int deptHheight, const float2 focalLength,
               const int predictionWidth, const int predictionHeight);
