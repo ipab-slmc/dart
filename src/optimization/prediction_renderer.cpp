@@ -210,6 +210,7 @@ void PredictionRenderer::raytracePrediction(const std::vector<const MirroredMode
 
     _debugBoxIntersections.syncDeviceToHost();
 
+    CheckCudaDieOnError();
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
         std::cerr << "gpu_raytracePrediction error: %s\n" << cudaGetErrorString(err) << std::endl;

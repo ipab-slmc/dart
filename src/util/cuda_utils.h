@@ -7,7 +7,8 @@
 #define CheckCudaDieOnError() _CheckCudaDieOnError( __FILE__, __LINE__ );
 namespace dart {
 inline void _CheckCudaDieOnError( const char * sFile, const int nLine ) {
-    cudaError_t error = cudaGetLastError();
+    //cudaError_t error = cudaGetLastError();
+    cudaError_t error = cudaPeekAtLastError();
     if (error != cudaSuccess) {
         std::string errorString(cudaGetErrorString(error));
         std::cerr << "CUDA error: " << errorString << std::endl;

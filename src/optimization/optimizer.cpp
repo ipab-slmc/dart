@@ -591,6 +591,7 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
     Eigen::SparseMatrix<float> sparseJTJ(sysSize,sysSize);
     Eigen::VectorXf fullJTe(sysSize);
 
+    CheckCudaDieOnError();
     for (int iteration=0; iteration < opts.numIterations; ++iteration) {
 
         sparseJTJ.setZero();
@@ -610,7 +611,9 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
                 constModelPtrs[m] = models[m];
             }
             _predictionRenderer->raytracePrediction(constModelPtrs,_depthPredictStream);
+            CheckCudaDieOnError();
             _predictionRenderer->cullUnobservable(dObsVertMap,width,height,_depthPredictStream);
+            CheckCudaDieOnError();
         }
         
         if(opts.dataAssociation==MinSDF) {
@@ -626,6 +629,7 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
                                               opts.debugObsToModNorm ? _dDebugObsToModNorm : 0,
                                               _posInfoStream);
         }
+        CheckCudaDieOnError();
 
 
 
@@ -647,6 +651,7 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
             initDebugIntersectionError(_dDebugIntersectionError,_maxIntersectionSites);
 //            cudaMemset(_dDebugIntersectionError,0,_maxIntersectionSites*sizeof(float));
         }
+        CheckCudaDieOnError();
         for (int m=0; m<nModels; ++m) {
 
             MirroredModel & model = *models[m];
@@ -662,18 +667,22 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
 //            float modToObsErr = 0;
             float intersectionError = 0;
 
+            CheckCudaDieOnError();
             if (opts.lambdaObsToMod > 0) {
                 computeObsToModContribution(eJ,JTJ,_iterationSummaries[m][iteration].errObsToMod,model,pose,opts,observation);
                 _iterationSummaries[m][iteration].nAssociatedPoints = _lastElements->hostPtr()[m];
             }
+            CheckCudaDieOnError();
             if (opts.lambdaModToObs > 0) {
                 computeModToObsContribution(eJ,JTJ,_iterationSummaries[m][iteration].errModToObs,model,pose,T_obsSdfs_camera[m],opts);
             }
+            CheckCudaDieOnError();
             if (opts.lambdaIntersection[m + m*nModels] > 0) {
                 computeSelfIntersectionContribution(eJ,JTJ,intersectionError,model,pose,opts,
                                                     *collisionClouds[m],*intersectionPotentialMatrices[m], nModels,
                                                     debugIntersectionOffset);
             }
+            CheckCudaDieOnError();
             for (int d=0; d<nModels; ++d) {
                 if (d == m) { continue; }
                 if (opts.lambdaIntersection[m + d*nModels] > 0) {
@@ -681,6 +690,7 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
                                                     *collisionClouds[m],nModels,debugIntersectionOffset);
                 }
             }
+            CheckCudaDieOnError();
 
             // TODO: get rid of redundancy
             // make JTJ symmetric
@@ -716,15 +726,18 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
 
         }
 
+        CheckCudaDieOnError();
         if (opts.lambdaModToObs > 0) {
             for (int m=0; m<nModels; ++m) {
                 _iterationSummaries[m][iteration].nPredictedPoints = _lastElements->hostPtr()[m];
             }
         }
 
+        CheckCudaDieOnError();
         for (int p=0; p<priors.size(); ++p) {
             priors[p]->computeContribution(sparseJTJ,fullJTe,modelOffsets,priorOffsets[p],models,poses,opts);
         }
+        CheckCudaDieOnError();
 
         Eigen::VectorXf paramUpdate = -sparseJTJ.triangularView<Eigen::Upper>().solve(fullJTe);
 

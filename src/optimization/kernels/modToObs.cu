@@ -75,6 +75,7 @@ __global__ void gpu_normEqnsModToObs(const int dims,
 
     const int predFrame = labelFrames[sdf];
 
+    printf("tid: %i, %i\n", tid, tid*dims);
     float * J = &s[tid*dims];
 
     const float3 sdfGrad_m = obsSdf->getGradientInterpolated(predVGrid);
@@ -769,12 +770,13 @@ void normEqnsModToObs(const int dimensions,
             }
         }
 
-#ifdef CUDA_ERR_CHECK
+        CheckCudaDieOnError();
+//#ifdef CUDA_ERR_CHECK
         cudaError_t err = cudaGetLastError();
         if (err != cudaSuccess) {
             printf("normEqnsModToObs: %s\n",cudaGetErrorString(err));
         }
-#endif
+//#endif
     }
 
 }

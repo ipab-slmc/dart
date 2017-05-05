@@ -122,7 +122,7 @@ public:
         const int z1 = z0 + 1;
 
         if ( !(x0 >= 0 && x1 < dim.x && y0 >= 0 && y1 < dim.y && z0 >=0 && z1 < dim.z) ) {
-            printf("nope_ (%d)\n",isInBoundsInterp(pGrid));
+            //printf("nope_ (%d)\n",isInBoundsInterp(pGrid));
         }
 
         const float dx00 = lerp( getValue(make_int3(x0,y0,z0)), getValue(make_int3(x1,y0,z0)), fx);

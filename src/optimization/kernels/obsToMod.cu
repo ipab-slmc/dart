@@ -273,6 +273,7 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
     const float4 xObs_m = T_mc*obsVertMap[pts[index].index];
 
     // array declarations
+    printf("th: %i, %i\n", threadIdx.x, threadIdx.x*dims);
     float * J = &s[threadIdx.x*dims];
 
     int obsFrame = sdfFrames[pts[index].dataAssociation];
@@ -643,15 +644,34 @@ void normEqnsObsToMod(const int dims,
     // initilize system to zero
     cudaMemset(dResult,0,(dims + JTJSize(dims) + 1)*sizeof(float));
 
+//    static const uint threads_per_block = 64;
+//    static const uint threads_per_block = 128;
+    //static const uint threads_per_block = 150;//OK
+    //static const uint threads_per_block = 165;//OK
+    //static const uint threads_per_block = 170;//OK
+    static const uint threads_per_block = 64;//OK
+//    static const uint threads_per_block = 256;
+    static const uint shmem_per_block = 64*dims*sizeof(float); // smaller than 48K
+    //static const uint shmem_per_block = 128*dims*sizeof(float); // smaller than 48K
+
+
     if (nElements > 10) {
 
-        block = dim3(64,1,1);
-        grid = dim3(ceil((double)nElements/64),1,1);
+        block = dim3(threads_per_block,1,1);
+        grid = dim3(ceil((double)nElements/threads_per_block),1,1);
+
+//        std::cout << "block " << block.x << "," << block.y << "," << block.z << " => " << block.x*block.y*block.z <<  std::endl;
+//        std::cout << "grid " << grid.x << "," << grid.y << "," << grid.z << " => " << grid.x*grid.y*grid.z <<std::endl;
+
+        std::cout << "Dg: " << grid.x*grid.y*grid.z << std::endl;
+        std::cout << "Db: " << block.x*block.y*block.z << std::endl;
+        std::cout << "Ns: " << shmem_per_block << std::endl;
+        // Total amount of shared memory per block:       49152 bytes
 
         {
 
             if (debugJs == 0) {
-                gpu_normEqnsObsToMod<false><<<grid,block,64*dims*sizeof(float)>>>(dims,
+                gpu_normEqnsObsToMod<false><<<grid,block,shmem_per_block>>>(dims,
                                                                                   dPts,
                                                                                   dObsVertMap,
                                                                                   nElements,
@@ -667,7 +687,7 @@ void normEqnsObsToMod(const int dims,
                                                                                   dResult,
                                                                                   debugJs);
             } else {
-                gpu_normEqnsObsToMod<true><<<grid,block,64*dims*sizeof(float)>>>(dims,
+                gpu_normEqnsObsToMod<true><<<grid,block,shmem_per_block>>>(dims,
                                                                                  dPts,
                                                                                  dObsVertMap,
                                                                                  nElements,
@@ -684,12 +704,13 @@ void normEqnsObsToMod(const int dims,
                                                                                  debugJs);
             }
 
-#ifdef CUDA_ERR_CHECK
+            CheckCudaDieOnError();
+//#ifdef CUDA_ERR_CHECK
             cudaError_t err = cudaGetLastError();
             if (err != cudaSuccess) {
                 printf("gpu_normEqnsObsToMod error: %s\n",cudaGetErrorString(err));
             }
-#endif
+//#endif
         }
 
     }
