@@ -273,7 +273,8 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
     const float4 xObs_m = T_mc*obsVertMap[pts[index].index];
 
     // array declarations
-    printf("th: %i, %i\n", threadIdx.x, threadIdx.x*dims);
+//    printf("th: %i, %i\n", threadIdx.x, threadIdx.x*dims);
+//    printf("dims1: %i\n", dims);
     float * J = &s[threadIdx.x*dims];
 
     int obsFrame = sdfFrames[pts[index].dataAssociation];
@@ -282,13 +283,50 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
 
     // compute SDF gradient
     const int g = pts[index].dataAssociation;
+//    printf("g: %i\n", g);
     const Grid3D<float> & sdf = sdfs[g];
 
-    const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
+    float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
+//    printf("xObs_g: %f, %f, %f\n", xObs_g.x, xObs_g.y, xObs_g.z);
+    if(fabs(xObs_g.x)<1.0 || fabs(xObs_g.y)<1.0 || fabs(xObs_g.z)<1.0) {
+        printf("xObs_g: %f, %f, %f\n", xObs_g.x, xObs_g.y, xObs_g.z);
+    }
+//    const float grad = 10;
+//    if(fabs(xObs_g.x)<1.0 || fabs(xObs_g.y)<1.0 || fabs(xObs_g.z)<1.0) {
+//        if(fabs(xObs_g.x)<1.0)
+//            xObs_g.x = xObs_g.x/fabs(xObs_g.x) * grad;
+//        if(fabs(xObs_g.y)<1.0)
+//            xObs_g.y = xObs_g.y/fabs(xObs_g.y) * grad;
+//        if(fabs(xObs_g.z)<1.0)
+//            xObs_g.z = xObs_g.z/fabs(xObs_g.z) * grad;
+//        printf("xObs_g: %f, %f, %f\n", xObs_g.x, xObs_g.y, xObs_g.z);
+//    }
+//    printf("inbounds %d, %d, %d, %d\n", sdf.isInBounds(xObs_g), sdf.isInBoundsInterp(xObs_g), sdf.isInBoundsGradient(xObs_g), sdf.isInBoundsGradientInterp(xObs_g));
+    if (!sdf.isInBoundsGradientInterp(xObs_g)) {
+        return;
+    }
+    //xObs_g = make_float3(0,0,0);
+//    xObs_g = make_float3(10,10,10); // workaround
     const float3 sdfGrad_f = sdf.getGradientInterpolated(xObs_g);
+//    if(fabs(xObs_g.x)<1.0 || fabs(xObs_g.y)<1.0 || fabs(xObs_g.z)<1.0) {
+//        printf("sdfGrad_f: %f, %f, %f\n", sdfGrad_f.x, sdfGrad_f.y, sdfGrad_f.z);
+//    }
+
+//    if(fabs(sdfGrad_f.x)<1.0 || fabs(sdfGrad_f.y)<1.0 || fabs(sdfGrad_f.z)<1.0) {
+//        printf("sdfGrad_f: %f, %f, %f\n", sdfGrad_f.x, sdfGrad_f.y, sdfGrad_f.z);
+//    }
+//    printf("xObs_g: %f, %f, %f\n", xObs_g.x, xObs_g.y, xObs_g.z);
+//    printf("sdfGrad_f: %f, %f, %f\n", sdfGrad_f.x, sdfGrad_f.y, sdfGrad_f.z);
     const float3 sdfGrad_m = SE3Rotate(T_mfs[obsFrame],sdfGrad_f);
+//    printf("sdfGrad_m: %f, %f, %f\n", sdfGrad_m.x, sdfGrad_m.y, sdfGrad_m.z);
+
+//    printf("dims2: %i\n", dims);
 
     getErrorJacobianOfModelPoint(J,xObs_m,obsFrame,sdfGrad_m,dims,dependencies,jointTypes,jointAxes,T_fms,T_mfs);
+//    printf("dims3: %i\n", dims);
+//    for(uint i(0); i<dims; i++) {
+//        printf("J: %d\n", J[i]);
+//    }
 
     if (dbgJs) {
         debugJs[index*dims + 0] = make_float4(1,0,0,1);
@@ -299,7 +337,11 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
         debugJs[index*dims + 5] = make_float4(-xObs_m.y, xObs_m.x,        0,1);
     }
 
-    const float residual = pts[index].error;
+//    const float residual = pts[index].error;
+    if (!sdf.isInBoundsGradientInterp(xObs_g)) {
+        return;
+    }
+    const float residual = (sdf.getValueInterpolated_(xObs_g))*sdf.resolution;
 
     float * JTr = result;
     float * JTJ = &result[dims];
@@ -651,9 +693,10 @@ void normEqnsObsToMod(const int dims,
     //static const uint threads_per_block = 170;//OK
     static const uint threads_per_block = 64;//OK
 //    static const uint threads_per_block = 256;
-    static const uint shmem_per_block = 64*dims*sizeof(float); // smaller than 48K
+    //static const uint shmem_per_block = 64*dims*sizeof(float); // smaller than 48K
     //static const uint shmem_per_block = 128*dims*sizeof(float); // smaller than 48K
-
+    //static const uint shmem_per_block = 256*dims*sizeof(float);
+    static const uint shmem_per_block = threads_per_block*dims*sizeof(float);
 
     if (nElements > 10) {
 
@@ -663,10 +706,10 @@ void normEqnsObsToMod(const int dims,
 //        std::cout << "block " << block.x << "," << block.y << "," << block.z << " => " << block.x*block.y*block.z <<  std::endl;
 //        std::cout << "grid " << grid.x << "," << grid.y << "," << grid.z << " => " << grid.x*grid.y*grid.z <<std::endl;
 
-        std::cout << "Dg: " << grid.x*grid.y*grid.z << std::endl;
-        std::cout << "Db: " << block.x*block.y*block.z << std::endl;
-        std::cout << "Ns: " << shmem_per_block << std::endl;
-        // Total amount of shared memory per block:       49152 bytes
+//        std::cout << "Dg: " << grid.x*grid.y*grid.z << std::endl;
+//        std::cout << "Db: " << block.x*block.y*block.z << std::endl;
+//        std::cout << "Ns: " << shmem_per_block << std::endl;
+        // Total amount of shared memory per block:       49152 bytes (48K)
 
         {
 

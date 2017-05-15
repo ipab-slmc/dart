@@ -228,6 +228,7 @@ void Optimizer::computeObsToModContribution(Eigen::VectorXf & eJ, Eigen::MatrixX
                                             const OptimizationOptions & opts, const Observation & observation) {
 
     const int dims = pose.getReducedDimensions();
+    //std::cout << "dims: " << dims << std::endl;
     const int modelNum = model.getModelID();
 
     if (pose.isReduced()) {
