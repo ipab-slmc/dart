@@ -301,7 +301,8 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
         debugJs[index*dims + 5] = make_float4(-xObs_m.y, xObs_m.x,        0,1);
     }
 
-    const float residual = pts[index].error;
+    // recompute error in case the data association is provided externally
+    const float residual = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
 
     float * JTr = result;
     float * JTJ = &result[dims];
@@ -315,12 +316,12 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
         break;
     case HuberLoss:
     {
-        if (fabs(pts[index].error) < huberDelta ) {
+        if (fabs(residual) < huberDelta ) {
             computeSquaredLossResult(dims,-residual,J,e,JTr,JTJ); // TODO: why negative again?
         }
         else {
             float v = huberDelta;
-            if (pts[index].error < 0) {
+            if (residual < 0) {
                 v = -v;
             }
             for (int i=0; i<dims; i++) {
@@ -331,7 +332,7 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
                     atomicAdd(&JTJ[((i*(i+1))>>1) + j],v2);
                 }
             }
-            atomicAdd(e,huberDelta * (fabs(pts[index].error) - 0.5*huberDelta));
+            atomicAdd(e,huberDelta * (fabs(residual) - 0.5*huberDelta));
         }
     }
         break;
