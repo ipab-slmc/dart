@@ -284,6 +284,9 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
     const Grid3D<float> & sdf = sdfs[g];
 
     const float3 xObs_g = sdf.getGridCoords(make_float3(xObs_f));
+    if (!sdf.isInBoundsGradientInterp(xObs_g)) {
+        return;
+    }
     const float3 sdfGrad_f = sdf.getGradientInterpolated(xObs_g);
     const float3 sdfGrad_m = SE3Rotate(T_mfs[obsFrame],sdfGrad_f);
 
