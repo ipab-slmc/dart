@@ -122,7 +122,7 @@ public:
         const int z1 = z0 + 1;
 
         if ( !(x0 >= 0 && x1 < dim.x && y0 >= 0 && y1 < dim.y && z0 >=0 && z1 < dim.z) ) {
-//            printf("nope_ (%d)\n",isInBoundsInterp(pGrid));
+            printf("nope_ (%d)\n",isInBoundsInterp(pGrid));
         }
 
         const float dx00 = lerp( getValue(make_int3(x0,y0,z0)), getValue(make_int3(x1,y0,z0)), fx);
@@ -321,21 +321,10 @@ public:
         T f_my = getValueInterpolated_(pGrid - make_float3(0,1,0));
         T f_mz = getValueInterpolated_(pGrid - make_float3(0,0,1));
 
-//        if(fabs(pGrid.x)<1.0 || fabs(pGrid.y)<1.0 || fabs(pGrid.z)<1.0) {
-//            printf("f_p: %f, %f, %f\n", f_px, f_py, f_pz);
-//            printf("f_m: %f, %f, %f\n", f_mx, f_my, f_mz);
-//        }
-
         T3 grad;
         grad.x = 0.5*(f_px - f_mx);
-//        printf("grad.x %f\n", grad.x);
         grad.y = 0.5*(f_py - f_my);
-//        printf("grad.y %f\n", grad.y);
         grad.z = 0.5*(f_pz - f_mz);
-//        printf("grad.z %f\n", grad.z);
-//        if(fabs(pGrid.x)<1.0 || fabs(pGrid.y)<1.0 || fabs(pGrid.z)<1.0) {
-//            printf("grad: %f, %f, %f\n", grad.x, grad.y, grad.z);
-//        }
         return grad;
 
     }
