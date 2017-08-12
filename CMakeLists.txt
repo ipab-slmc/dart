@@ -17,7 +17,7 @@ find_package(catkin QUIET)
 
 if(catkin_FOUND)
     catkin_package(
-        INCLUDE_DIRS src
+        INCLUDE_DIRS src include
         LIBRARIES ${PROJECT_NAME}
     )
 endif()
@@ -225,9 +225,11 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src/)
 
-# set up library output
-set(BUILD_SHARED_LIBS ON)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+if(NOT CUDA_FOUND)
+    # set up library output
+    set(BUILD_SHARED_LIBS ON)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+endif()
 
 set(CUDA_NVCC_FLAGS "-arch=sm_35" "--use_fast_math"  "-O3" "--ptxas-options=--verbose") # "-fmad=false" "-DTHRUST_DEVICE_BACKEND=THRUST_DEVICE_BACKEND_OMP"
 
