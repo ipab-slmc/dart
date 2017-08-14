@@ -231,8 +231,6 @@ if(NOT CUDA_FOUND)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 endif()
 
-set(CUDA_NVCC_FLAGS "-arch=sm_35" "--use_fast_math"  "-O3" "--ptxas-options=--verbose") # "-fmad=false" "-DTHRUST_DEVICE_BACKEND=THRUST_DEVICE_BACKEND_OMP"
-
 # add library
 if(CUDA_FOUND)
     include_directories(${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc)
