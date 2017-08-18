@@ -15,13 +15,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/"
 # check if catkin environment is used
 find_package(catkin QUIET)
 
-if(catkin_FOUND)
-    catkin_package(
-        INCLUDE_DIRS src include
-        LIBRARIES ${PROJECT_NAME}
-    )
-endif()
-
 # find packages with modules
 find_package(CUDA REQUIRED)
 find_package(PNG REQUIRED)
@@ -30,6 +23,13 @@ find_package(GLUT REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(DEPTHSENSE)
 find_package(OpenNI2)
+
+if(catkin_FOUND)
+    catkin_package(
+        INCLUDE_DIRS src include ${CUDA_INCLUDE_DIRS} ${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc
+        LIBRARIES ${PROJECT_NAME}
+    )
+endif()
 
 # find packages with pkg-config
 find_package(PkgConfig)
