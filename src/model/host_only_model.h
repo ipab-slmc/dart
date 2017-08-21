@@ -46,7 +46,7 @@ public:
     inline int getFrameNumChildren(const int frame) const { return _children[frame].size(); }
     const inline int * getFrameChildren(const int frame) const { return _children[frame].data(); }
 
-    int getFrameJoint(int frame) const { for (int i=0; i<getNumJoints(); i++) if (getJointFrame(i) == frame) return i; return -1; }
+    int getFrameJoint(int frame) const { for (uint i=0; i<getNumJoints(); i++) if (getJointFrame(i) == frame) return i; return -1; }
 
     const int * getDependencies() const { return _dependencies.data(); }
     inline int getDependency(const int frame, const int joint) const { return _dependencies[frame*getNumJoints() + joint]; }
