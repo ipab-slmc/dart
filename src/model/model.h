@@ -115,6 +115,12 @@ public:
 
     void setName(const std::string name) { _name = name; }
 
+    void addFrameName(const std::string &name) { _frameNames.push_back(name); }
+
+    std::string getFrameName(const uint id) const { return _frameNames[id]; }
+
+    uint getFrameIdByName(const std::string &name);
+
 protected:
     int _dimensionality;
 
@@ -122,6 +128,7 @@ protected:
     std::vector<std::vector<int> > _frameGeoms;
     std::vector<GeomType> _geomTypes;
     std::vector<std::string> _jointNames;
+    std::vector<std::string> _frameNames;
 
     SE3 _T_mc;
     SE3 _T_cm;

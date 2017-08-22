@@ -196,6 +196,14 @@ int Model::getJointIdByName(const std::string &name) {
         throw std::range_error("requested frame '"+name+"' does not exist");
 }
 
+uint Model::getFrameIdByName(const std::string &name) {
+    const auto pos = std::find(_frameNames.begin(), _frameNames.end(), name);
+    if(pos != _frameNames.end())
+        return std::distance(_frameNames.begin(), pos);
+    else
+        throw std::range_error("requested frame '"+name+"' does not exist");
+}
+
 void Model::renderSdf(const dart::Grid3D<float> & sdf, float levelSet) const {
 
     glDisable(GL_BLEND);
