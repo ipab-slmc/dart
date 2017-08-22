@@ -92,6 +92,7 @@ MirroredVector<T>::MirroredVector(const uint length) : _length(length) {
         _hVector = NULL;
         _dVector = NULL;
     }
+    CheckCudaDieOnError();
 }
 
 template <typename T>
