@@ -27,8 +27,6 @@ public:
 
     Model(const int dimensionality) { _dimensionality = dimensionality; }
 
-    Model(const Model & copy);
-
     int getPoseDimensionality() const { return _dimensionality; }
 
     virtual void setArticulation(const float * pose) = 0;

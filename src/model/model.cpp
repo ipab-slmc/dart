@@ -7,24 +7,6 @@ namespace dart {
 
 ModelRenderer * Model::_renderer;
 
-Model::Model(const Model & copy) {
-
-    _dimensionality = copy._dimensionality;
-
-    _frameGeoms = copy._frameGeoms;
-    _frameSdfNumbers = copy._frameSdfNumbers;
-    _geomTypes = copy._geomTypes;
-    _geomScales = copy._geomScales;
-    _geomTransforms = copy._geomTransforms;
-    _meshNumbers = copy._meshNumbers;
-    _T_mc = copy._T_mc;
-    _T_cm = copy._T_cm;
-    _jointLimits = copy._jointLimits;
-    _jointNames = copy._jointNames;
-    _name = copy._name;
-
-}
-
 void Model::initializeRenderer(dart::MeshReader * meshReader) {
     Model::_renderer = new dart::ModelRenderer(meshReader);
 }
