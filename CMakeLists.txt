@@ -24,19 +24,19 @@ find_package(GLEW REQUIRED)
 find_package(DEPTHSENSE)
 find_package(OpenNI2)
 
-if(catkin_FOUND)
-    catkin_package(
-        INCLUDE_DIRS src include ${CUDA_INCLUDE_DIRS} ${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc
-        LIBRARIES ${PROJECT_NAME}
-    )
-endif()
-
 # find packages with pkg-config
 find_package(PkgConfig)
 pkg_check_modules(eigen3 REQUIRED eigen3)
 pkg_check_modules(tinyxml REQUIRED tinyxml)
 pkg_check_modules(matheval REQUIRED libmatheval)
 pkg_check_modules(assimp assimp)
+
+if(catkin_FOUND)
+    catkin_package(
+        INCLUDE_DIRS src include ${CUDA_INCLUDE_DIRS} ${CUDA_TOOLKIT_ROOT_DIR}/samples/common/inc ${eigen3_INCLUDE_DIRS}
+        LIBRARIES ${PROJECT_NAME}
+    )
+endif()
 
 include_directories(
     ${eigen3_INCLUDE_DIRS}
