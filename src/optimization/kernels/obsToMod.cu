@@ -245,7 +245,7 @@ __global__ void gpu_errorAndDataAssociationObsToModMultiModel(const float4 * obs
 
 template <bool dbgJs>
 __global__ void gpu_normEqnsObsToMod(const int dims,
-                                     const DataAssociatedPoint * pts,
+                                     DataAssociatedPoint * pts,
                                      const float4 * obsVertMap,
                                      const int nPoints,
                                      const SE3 T_mc,
@@ -302,7 +302,8 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
     }
 
     // recompute error in case the data association is provided externally
-    const float residual = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
+    pts[index].error = (sdf.getValueInterpolated(xObs_g))*sdf.resolution;
+    const float residual = pts[index].error;
 
     float * JTr = result;
     float * JTJ = &result[dims];
