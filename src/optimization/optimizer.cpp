@@ -51,10 +51,10 @@ void Optimizer::init(const int depthWidth, const int depthHeight, const float2 f
     cudaMalloc(&_dError,sizeof(float));
 
     cudaMalloc(&_dDebugDataAssocObsToMod,depthWidth*depthHeight*sizeof(int));
-    cudaMemset(_dDebugDataAssocObsToMod,0,depthWidth*depthHeight*sizeof(int));
+    cudaMemset(_dDebugDataAssocObsToMod,-1,depthWidth*depthHeight*sizeof(int));
 
     cudaMalloc(&_dDebugDataAssocModToObs,predictionWidth*predictionHeight*sizeof(int));
-    cudaMemset(_dDebugDataAssocModToObs,0,predictionWidth*predictionHeight*sizeof(int));
+    cudaMemset(_dDebugDataAssocModToObs,-1,predictionWidth*predictionHeight*sizeof(int));
 
     cudaMalloc(&_dDebugObsToModError,depthWidth*depthHeight*sizeof(float));
     cudaMemset(_dDebugObsToModError,0,depthWidth*depthHeight*sizeof(float));
