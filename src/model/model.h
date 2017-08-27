@@ -99,7 +99,7 @@ public:
     inline float getJointMax(const int joint) const { return _jointLimits[joint].y; }
 
     const std::string & getJointName(const int joint) const { return _jointNames[joint]; }
-    int getJointIdByName(const std::string &name);
+    int getJointIdByName(const std::string &name) const;
     void renderSdf(const dart::Grid3D<float> & sdf, float levelSet) const;
 
     void getArticulatedBoundingBox(float3 & mins, float3 & maxs, const float modelSdfPadding, const int nSweepPoints = 4);
@@ -119,7 +119,7 @@ public:
 
     std::string getFrameName(const uint id) const { return _frameNames[id]; }
 
-    uint getFrameIdByName(const std::string &name);
+    uint getFrameIdByName(const std::string &name) const;
 
 protected:
     int _dimensionality;

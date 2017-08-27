@@ -188,7 +188,7 @@ void Model::renderVoxelizedFrame(const int frameNumber, const char* args) const 
     }
 }
 
-int Model::getJointIdByName(const std::string &name) {
+int Model::getJointIdByName(const std::string &name) const {
     const auto pos = std::find(_jointNames.begin(), _jointNames.end(), name);
     if(pos != _jointNames.end())
         return std::distance(_jointNames.begin(), pos);
@@ -196,7 +196,7 @@ int Model::getJointIdByName(const std::string &name) {
         throw std::range_error("requested frame '"+name+"' does not exist");
 }
 
-uint Model::getFrameIdByName(const std::string &name) {
+uint Model::getFrameIdByName(const std::string &name) const {
     const auto pos = std::find(_frameNames.begin(), _frameNames.end(), name);
     if(pos != _frameNames.end())
         return std::distance(_frameNames.begin(), pos);
