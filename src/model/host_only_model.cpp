@@ -258,7 +258,7 @@ void HostOnlyModel::voxelize(float resolution, float padding, std::string cacheF
             continue;
         }
 
-        std::string filename = dart::stringFormat("%s.sdf%02d.res%06f.sdf",cacheFile.c_str(),n,resolution);
+        const std::string filename = cacheFile+"."+getFrameName(n)+"."+std::to_string(resolution)+".sdf";
         struct stat buffer;
 
         _sdfColors.push_back(getGeometryColor(getFrameGeoms(i)[getFrameNumGeoms(i)-1]));
