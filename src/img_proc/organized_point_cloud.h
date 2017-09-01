@@ -21,8 +21,6 @@ void depthToVertices(const DepthType * depthIn, float4 * vertOut, const int widt
 
 void verticesToNormals(const float4 * vertIn, float4 * normOut, const int width, const int height);
 
-void eliminatePlane(float4 * verts, const float4 * norms, const int width, const int height, const float3 planeNormal, const float planeD, const float epsDist = 0.01, const float epsNorm = 0.1);
-
 void cropBox(float4 * verts, const int width, const int height, const float3 & boxMin, const float3 & boxMax);
 
 void maskPointCloud(float4 * verts, const int width, const int height, const int * mask);

@@ -74,11 +74,6 @@ public:
      */
     void optimizePoses();
 
-    void subtractPlane(const float3 planeNormal,
-                       const float planeIntercept,
-                       const float distThreshold,
-                       const float normThreshold);
-
     // accessors
     inline int getNumModels() const { return _mirroredModels.size(); }
 
@@ -184,8 +179,6 @@ private:
     MirroredVector<int> * _nSdfs;
     MirroredVector<float> * _distanceThresholds;
     MirroredVector<float> * _normalThresholds;
-    MirroredVector<float> * _planeOffsets;
-    MirroredVector<float3> * _planeNormals;
 };
 
 }

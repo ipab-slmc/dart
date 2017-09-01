@@ -50,8 +50,6 @@ public:
                        MirroredVector<int> & nSdfs,
                        MirroredVector<float> & distanceThresholds,
                        MirroredVector<float> & normalThresholds,
-                       MirroredVector<float> & planeOffsets,
-                       MirroredVector<float3> & planeNormals,
                        std::vector<MirroredVector<float4> *> & collisionClouds,
                        std::vector<MirroredVector<int> *> & intersectionPotentialMatrices,
                        std::vector<Eigen::MatrixXf *> & dampingMatrices,

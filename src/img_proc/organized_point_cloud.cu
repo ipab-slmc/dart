@@ -304,35 +304,6 @@ __global__ void gpu_verticesToNormals(const float4 * vertIn,
 
 }
 
-__global__ void gpu_eliminatePlane(float4 * verts, const float4 * norms, const int width, const int height, const float3 planeNormal, const float planeD, const float epsDist, const float epsNorm) {
-
-    const int x = blockIdx.x*blockDim.x + threadIdx.x;
-    const int y = blockIdx.y*blockDim.y + threadIdx.y;
-
-    if (x >= width || y >= height)
-        return;
-
-    const int index = x + y*width;
-
-    // check vertex validity
-    float4& v = verts[index];
-    if ( v.w == 0) {
-        return;
-    }
-
-    // check normal threshold
-    const float4& n = norms[index];
-    if (dot(make_float3(n),planeNormal) < epsNorm) {
-        return;
-    }
-
-    // check distance threshold
-    if (abs(dot(make_float3(v),planeNormal) - planeD) < epsDist ) {
-        v.w = -1;
-    }
-
-}
-
 __global__ void gpu_cropBox(float4 * verts, const int width, const int height, const float3 boxMin, const float3 boxMax) {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
@@ -421,15 +392,6 @@ void verticesToNormals(const float4 * vertIn, float4 * normOut, const int width,
     dim3 grid( ceil( width / (float)block.x), ceil( height / (float)block.y ));
 
     gpu_verticesToNormals<<<grid,block>>>(vertIn,normOut,width,height);
-}
-
-void eliminatePlane(float4 * verts, const float4 * norms, const int width, const int height, const float3 planeNormal, const float planeD, const float epsDist, const float epsNorm) {
-
-    dim3 block(16,8,1);
-    dim3 grid( ceil( width / (float)block.x), ceil( height / (float)block.y ));
-
-    gpu_eliminatePlane<<<grid,block>>>(verts,norms,width,height,planeNormal,planeD,epsDist,epsNorm);
-
 }
 
 void cropBox(float4 * verts, const int width, const int height, const float3 & boxMin, const float3 & boxMax) {

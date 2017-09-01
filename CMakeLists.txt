@@ -69,8 +69,6 @@ set(dart_src
     ${PROJECT_SOURCE_DIR}/src/geometry/sdf.h
     ${PROJECT_SOURCE_DIR}/src/geometry/sdf.cpp
     ${PROJECT_SOURCE_DIR}/src/geometry/SE3.h
-    ${PROJECT_SOURCE_DIR}/src/geometry/plane_fitting.h
-    ${PROJECT_SOURCE_DIR}/src/geometry/plane_fitting.cpp
 
     ${PROJECT_SOURCE_DIR}/src/mesh/mesh.h
     ${PROJECT_SOURCE_DIR}/src/mesh/mesh.cpp
@@ -152,7 +150,6 @@ set(cpu_specific_src
 
 set(gpu_specific_src
     ${PROJECT_SOURCE_DIR}/src/geometry/distance_transforms.cu
-    ${PROJECT_SOURCE_DIR}/src/geometry/plane_fitting.cu
 
     ${PROJECT_SOURCE_DIR}/src/img_proc/bilateral_filter.cu
     ${PROJECT_SOURCE_DIR}/src/img_proc/img_ops.cu

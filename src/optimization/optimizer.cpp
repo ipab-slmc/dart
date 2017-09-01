@@ -531,8 +531,6 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
                               MirroredVector<int> & nSdfs,
                               MirroredVector<float> & distanceThresholds,
                               MirroredVector<float> & normalThresholds,
-                              MirroredVector<float> & planeOffsets,
-                              MirroredVector<float3> &  planeNormals,
                               std::vector<MirroredVector<float4> *> & collisionClouds,
                               std::vector<MirroredVector<int> *> & intersectionPotentialMatrices,
                               std::vector<Eigen::MatrixXf *> & dampingMatrices,
@@ -560,11 +558,7 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
     bool predictionsNeeded = (opts.lambdaModToObs > 0);
     Observation observation(dObsVertMap,dObsNormMap,width,height);
 
-    memcpy(planeOffsets.hostPtr(),opts.planeOffset.data(),nModels*sizeof(float));
-    memcpy(planeNormals.hostPtr(),opts.planeNormal.data(),nModels*sizeof(float3));
     memcpy(distanceThresholds.hostPtr(),opts.distThreshold.data(),nModels*sizeof(float));
-    planeOffsets.syncHostToDevice();
-    planeNormals.syncHostToDevice();
     distanceThresholds.syncHostToDevice();
 
     std::vector<SE3> T_obsSdfs_camera;
@@ -618,8 +612,7 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
                                               T_mcs.devicePtr(),T_fms.devicePtr(),
                                               sdfFrames.devicePtr(),sdfs.devicePtr(),
                                               nSdfs.devicePtr(),distanceThresholds.devicePtr(),
-                                              normalThresholds.devicePtr(),planeOffsets.devicePtr(),
-                                              planeNormals.devicePtr(),_lastElements->devicePtr(),
+                                              normalThresholds.devicePtr(),_lastElements->devicePtr(),
                                               _dPts->devicePtr(),
                                               opts.debugObsToModDA ? _dDebugDataAssocObsToMod : 0,
                                               opts.debugObsToModErr ? _dDebugObsToModError : 0,
