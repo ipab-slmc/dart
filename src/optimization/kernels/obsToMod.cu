@@ -290,6 +290,12 @@ __global__ void gpu_normEqnsObsToMod(const int dims,
     const float3 sdfGrad_f = sdf.getGradientInterpolated(xObs_g);
     const float3 sdfGrad_m = SE3Rotate(T_mfs[obsFrame],sdfGrad_f);
 
+    const float3 sdfGrad_c = SE3Rotate(T_mc,sdfGrad_m);
+    pts[index].grad = sdfGrad_c;
+    const float3 grad_normal = sdfGrad_c / norm3df(sdfGrad_c.x, sdfGrad_c.y, sdfGrad_c.z);
+    // angle between gradient and z-axis in camera frame
+    pts[index].grad_angle = acosf(grad_normal.z);
+
     getErrorJacobianOfModelPoint(J,xObs_m,obsFrame,sdfGrad_m,dims,dependencies,jointTypes,jointAxes,T_fms,T_mfs);
 
     if (dbgJs) {

@@ -87,6 +87,8 @@ struct DataAssociatedPoint {
     int index;
     int dataAssociation;
     float error;
+    float3 grad;
+    float grad_angle;
 };
 
 }
