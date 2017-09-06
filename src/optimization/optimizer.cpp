@@ -536,7 +536,8 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
                               std::vector<MirroredVector<float4> *> & collisionClouds,
                               std::vector<MirroredVector<int> *> & intersectionPotentialMatrices,
                               std::vector<Eigen::MatrixXf *> & dampingMatrices,
-                              std::vector<Prior *> & priors) {
+                              std::vector<Prior *> & priors,
+                              const bool do_pose_update) {
 
     // resize scratch space if there are more models than we've seen before
     const int nModels = models.size();
@@ -726,33 +727,35 @@ void Optimizer::optimizePoses(std::vector<MirroredModel *> & models,
             priors[p]->computeContribution(sparseJTJ,fullJTe,modelOffsets,priorOffsets[p],models,poses,opts);
         }
 
-        Eigen::VectorXf paramUpdate = -sparseJTJ.triangularView<Eigen::Upper>().solve(fullJTe);
+        if(do_pose_update) {
+            Eigen::VectorXf paramUpdate = -sparseJTJ.triangularView<Eigen::Upper>().solve(fullJTe);
 
-        for (int m=0; m<nModels; ++m) {
-            MirroredModel & model = *models[m];
-            Pose & pose = poses[m];
+            for (int m=0; m<nModels; ++m) {
+                MirroredModel & model = *models[m];
+                Pose & pose = poses[m];
 
-            SE3 T_mc = model.getTransformCameraToModel();
+                SE3 T_mc = model.getTransformCameraToModel();
 
-            SE3 dT_mc = SE3Fromse3(se3(paramUpdate(modelOffsets[m] + 0),paramUpdate(modelOffsets[m] + 1),paramUpdate(modelOffsets[m] + 2),
-                                       paramUpdate(modelOffsets[m] + 3),paramUpdate(modelOffsets[m] + 4),paramUpdate(modelOffsets[m] + 5)));
-            SE3 new_T_mc = dT_mc*T_mc;
+                SE3 dT_mc = SE3Fromse3(se3(paramUpdate(modelOffsets[m] + 0),paramUpdate(modelOffsets[m] + 1),paramUpdate(modelOffsets[m] + 2),
+                                           paramUpdate(modelOffsets[m] + 3),paramUpdate(modelOffsets[m] + 4),paramUpdate(modelOffsets[m] + 5)));
+                SE3 new_T_mc = dT_mc*T_mc;
 
-            for (int i=0; i<pose.getReducedArticulatedDimensions(); ++i) {
-                if (!pose.isReduced()) {
-                    pose.getReducedArticulation()[i] = std::min(std::max(model.getJointMin(i),pose.getArticulation()[i] + paramUpdate(modelOffsets[m] + i + 6)),model.getJointMax(i));
-                } else {
-                    pose.getReducedArticulation()[i] = std::min(std::max(pose.getReducedMin(i),pose.getReducedArticulation()[i] + paramUpdate(modelOffsets[m] + i + 6)),pose.getReducedMax(i));
+                for (int i=0; i<pose.getReducedArticulatedDimensions(); ++i) {
+                    if (!pose.isReduced()) {
+                        pose.getReducedArticulation()[i] = std::min(std::max(model.getJointMin(i),pose.getArticulation()[i] + paramUpdate(modelOffsets[m] + i + 6)),model.getJointMax(i));
+                    } else {
+                        pose.getReducedArticulation()[i] = std::min(std::max(pose.getReducedMin(i),pose.getReducedArticulation()[i] + paramUpdate(modelOffsets[m] + i + 6)),pose.getReducedMax(i));
+                    }
                 }
+
+                pose.setTransformCameraToModel(new_T_mc);
+                pose.projectReducedToFull();
+                model.setPose(pose);
             }
 
-            pose.setTransformCameraToModel(new_T_mc);
-            pose.projectReducedToFull();
-            model.setPose(pose);
-        }
-
-        for (int p=0; p<priors.size(); ++p) {
-            priors[p]->updatePriorParams(paramUpdate.data() + priorOffsets[p],models);
+            for (int p=0; p<priors.size(); ++p) {
+                priors[p]->updatePriorParams(paramUpdate.data() + priorOffsets[p],models);
+            }
         }
 
     }

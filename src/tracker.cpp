@@ -441,7 +441,7 @@ void Tracker::optimizePose(const int modelNum) {
 
 }
 
-void Tracker::optimizePoses() {
+void Tracker::optimizePoses(const bool do_pose_update) {
 
     if (!initialized()) {
         std::cerr << "the tracker is not initialized properly for tracking. make sure a depth source and a model have been added" << std::endl;
@@ -467,7 +467,8 @@ void Tracker::optimizePoses() {
                               _collisionClouds,
                               _intersectionPotentialMatrices,
                               _dampingMatrices,
-                              _priors);
+                              _priors,
+                              do_pose_update);
 
 }
 
