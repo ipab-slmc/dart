@@ -369,7 +369,8 @@ LinearPoseReduction * loadLinearPoseReduction(std::string filename) {
 
 }
 
-ParamMapPoseReduction * loadParamMapPoseReduction(std::string filename) {
+ParamMapPoseReduction *
+loadParamMapPoseReduction(std::string filename) {
 
     std::ifstream fstream;
     fstream.open(filename.c_str(),std::ios_base::in);
@@ -381,7 +382,6 @@ ParamMapPoseReduction * loadParamMapPoseReduction(std::string filename) {
     fstream >> fullDimensions;
     fstream >> reducedDimensions;
 
-    // read mapping
     int * mapping = new int[fullDimensions];
     float * mins = new float[reducedDimensions];
     float * maxs = new float[reducedDimensions];

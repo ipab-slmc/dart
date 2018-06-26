@@ -7,7 +7,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # turn on c++11
-add_definitions(-std=c++11)
+add_definitions(-std=c++11 -g)
 
 # set CMakeModule path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/")
@@ -21,6 +21,8 @@ if(catkin_FOUND)
         LIBRARIES ${PROJECT_NAME}
     )
 endif()
+
+set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0" )
 
 # find packages with modules
 find_package(CUDA REQUIRED)
